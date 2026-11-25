@@ -577,3 +577,25 @@ background-image:linear-gradient(90deg,#5b3fd6aa 1px,transparent 1px),linear-gra
 .mlist.under .navbtns{grid-template-columns:repeat(4,minmax(0,1fr))}
 .mlist.under .ctlrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 @media(max-width:600px){.mlist.under .cmoves{grid-template-columns:38px 1fr 1fr}}
+/* play a friend online */
+.duelsetup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:900px}
+.duelsetup .card{display:flex;flex-direction:column;gap:14px}
+.duelsetup .lbl{display:block;margin-bottom:6px}
+.wrapseg{flex-wrap:wrap;border-radius:16px!important}
+.play.duel .side{gap:12px}
+.pl{border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.plrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.plrow b{font:700 17px/1.2 "Exo 2",sans-serif}
+.clk{margin-left:auto;font:700 22px/1 "Exo 2",sans-serif;font-variant-numeric:tabular-nums;padding:6px 12px;border-radius:10px;background:var(--bg2);color:var(--soft);min-width:84px;text-align:center}
+.clk.run{background:var(--ink);color:#fff}.clk.run.low{background:var(--bad)}
+.vgrid.one{grid-template-columns:minmax(0,1fr)}
+.vgrid.one .vt{aspect-ratio:16/9}
+.vgrid.one.sm{grid-template-columns:minmax(0,180px)}
+.vgrid.one.sm .vt{aspect-ratio:4/3}
+.pl .avb{display:flex;gap:6px;flex-wrap:wrap}.pl .avb .btn{min-height:34px;padding:5px 10px;font-size:13.5px}
+.chat{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.chat .msgs{display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto;min-height:40px}
+.cm{display:flex}.cm span{max-width:85%;padding:6px 10px;border-radius:14px;background:var(--bg2);font-size:15px;overflow-wrap:anywhere}
+.cm.me{justify-content:flex-end}.cm.me span{background:var(--brandSoft);color:var(--ink)}
+.chat form{flex-wrap:nowrap}.chat input{flex:1}
+@media(max-width:760px){.duelsetup{grid-template-columns:minmax(0,1fr)}}

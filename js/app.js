@@ -311,6 +311,7 @@ let curV = '';
 function route() {
   let v = location.hash.slice(1) || 'home';
   if (/^join-[A-Za-z0-9]+$/.test(v)) { MC.joinCode = v.slice(5).toUpperCase(); v = 'join'; }
+  if (/^duel-[A-Za-z0-9]+$/.test(v)) { MC.duelCode = v.slice(5).toUpperCase(); v = 'duel'; }
   if (!VIEWS[v]) v = 'home';
   if (v === 'mission' && !T) v = 'learn';
   const prev = curV; curV = v;
@@ -607,7 +608,8 @@ function vPlay() {
   $('v-play').innerHTML = `<div class="setup"><h2 class="title">Play a game</h2><p class="lede">Pick an opponent. Start with Sleepy Bot: it makes lots of mistakes, so you can practise winning.</p>
   <div class="bots">${K.bots.map(b => `<button class="bot glass${pr.bot === b.id ? ' on' : ''}" data-b="${b.id}" style="color:${b.color}"><svg aria-hidden="true"><use href="#botface"/></svg>
     <b>${esc(b.name)}</b><small>${esc(b.desc)}</small><span class="tag">Win: +${b.xp} XP · Won ${S.wins[b.id]}</span></button>`).join('')}
-    <button class="bot glass${pr.bot === 'friend' ? ' on' : ''}" data-b="friend" style="color:#13865a">${pipSvg()}<b>A friend</b><small>Two players on one device. Take turns moving.</small><span class="tag ok">Pass and play</span></button></div>
+    <button class="bot glass${pr.bot === 'friend' ? ' on' : ''}" data-b="friend" style="color:#13865a">${pipSvg()}<b>A friend</b><small>Two players on one device. Take turns moving.</small><span class="tag ok">Pass and play</span></button>
+    <a class="bot glass" href="#duel" style="color:#5b3fd6;text-decoration:none"><svg aria-hidden="true"><use href="#i-video"/></svg><b>A friend online</b><small>Play over the internet and see and hear each other. Share a link to start.</small><span class="tag ok">Video and voice</span></a></div>
   <div class="row"><span>Your colour</span><div class="seg glass" role="group" aria-label="Your colour">${[['w', 'White'], ['r', 'Random'], ['b', 'Black']].map(([v, l]) => `<button data-c="${v}" class="${pr.color === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
   <div class="btns"><button class="btn" id="pGo">Launch game →</button></div></div>`;
   const V = $('v-play');
