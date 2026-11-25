@@ -635,18 +635,20 @@ function renderGame(fresh) {
       <div class="pip">${pipSvg()}<div class="bubble glass" aria-live="polite"><p id="gSay"></p></div></div>
       <div class="glass card capbox" style="padding:12px 16px"><div class="caps w" id="gCapW" title="Pieces captured by White"></div><div class="caps" id="gCapB" title="Pieces captured by Black"></div></div>
       <div class="moves glass" id="gMoves" aria-label="Move list"></div>
+      <div class="navbtns" role="group" aria-label="Step through moves"><button class="btn small alt" data-gnav="first" aria-label="First position">⏮</button><button class="btn small alt" data-gnav="prev" aria-label="Previous move">◀</button><button class="btn small alt" data-gnav="next" aria-label="Next move">▶</button><button class="btn small alt" data-gnav="last" aria-label="Back to the game">⏭</button></div>
       <div class="btns"><button class="btn alt small" id="gHint">Hint</button><button class="btn alt small" id="gUndo">Undo</button><button class="btn alt small" id="gFlip">Flip board</button><button class="btn alt small" id="gEnd">Resign</button></div>
     </div></div>`;
   G.board = new Board($('gBoard'), m => playerMove(m));
   G.board.set(G.pos, { mine: G.friend ? G.pos.turn : G.mine, flip: G.flip, last: G.hist.length ? [G.hist.at(-1).m.from, G.hist.at(-1).m.to] : null, locked: G.over || G.busy });
   $('gHint').onclick = gHint; $('gUndo').onclick = gUndo;
+  document.querySelectorAll('[data-gnav]').forEach(b => b.onclick = () => { const at = G.view == null ? G.hist.length : G.view; gView({ first: 0, prev: at - 1, next: at + 1, last: G.hist.length }[b.dataset.gnav]); });
   $('gFlip').onclick = () => { G.flip = !G.flip; G.board.set(G.pos, { flip: G.flip }); };
   $('gEnd').onclick = async () => { if (G.over) { G.closed = true; return vPlay(); }
     if (await ask('Resign this game?', 'No worries, every game teaches you something.', 'Yes, resign', 'Keep playing')) endGame('resign'); };
   gSide();
   if (!fresh && G.sayText) $('gSay').textContent = G.sayText;
 }
-function say(t) { G.sayText = t; const e = $('gSay'); if (e) e.textContent = t; }
+function say(t) { G.sayText = t; if (G.view == null) G.sayLive = t; const e = $('gSay'); if (e) e.textContent = t; }
 function gSide() {
   const st = $('gStatus'); if (!st) return;
   const turnW = G.pos.turn === 'w';
@@ -657,11 +659,30 @@ function gSide() {
   const count = c => { const o = { P: 0, N: 0, B: 0, R: 0, Q: 0 }; G.pos.b.forEach(x => { if (x && x[0] === c && x[1] !== 'K') o[x[1]]++; }); return o; };
   const lost = c => { const n = count(c); return 'QRBNP'.split('').map(t => `<span class="pc p-${c}${t}"></span>`.repeat(Math.max(0, PIECE_SET[t] - n[t]))).join(''); };
   $('gCapW').innerHTML = lost('b'); $('gCapB').innerHTML = lost('w');
-  $('gMoves').innerHTML = G.hist.reduce((a, h, i) => a + (i % 2 === 0 ? `<span>${i / 2 + 1}.</span>` : '') + `<span>${esc(h.san)}</span>`, '');
-  $('gMoves').scrollTop = 1e6;
+  const at = G.view == null ? G.hist.length : G.view;
+  $('gMoves').innerHTML = G.hist.reduce((a, h, i) => a + (i % 2 === 0 ? `<span>${i / 2 + 1}.</span>` : '') + `<button class="mvb${at === i + 1 ? ' on' : ''}${i + 1 > at ? ' later' : ''}" data-ply="${i + 1}">${esc(h.san)}</button>`, '');
+  $('gMoves').querySelectorAll('[data-ply]').forEach(b => b.onclick = () => gView(+b.dataset.ply));
+  const on = $('gMoves').querySelector('.on'); $('gMoves').scrollTop = on ? Math.max(0, on.offsetTop - 60) : 1e6;
+  document.querySelectorAll('[data-gnav]').forEach(b => { const n = b.dataset.gnav; b.disabled = (n === 'first' || n === 'prev') ? at === 0 : at === G.hist.length; });
   $('gEnd').textContent = G.over ? 'New game' : 'Resign';
   $('gHint').disabled = G.over || G.busy; $('gUndo').disabled = !G.hist.length || G.busy;
 }
+/* look back through the game; the board is read-only until you return to the latest move */
+function gView(i) {
+  i = Math.max(0, Math.min(G.hist.length, i));
+  const live = i === G.hist.length;
+  G.view = live ? null : i;
+  const pos = live ? G.pos : G.hist[i].pos, l = i ? G.hist[i - 1] : null;
+  G.board.set(pos, { last: l ? [l.m.from, l.m.to] : null, hint: [], locked: live ? (G.over || G.busy) : true, mine: G.friend ? pos.turn : G.mine });
+  if (!live) say(i ? `Looking back at ${Math.ceil(i / 2)}${i % 2 ? '.' : '...'} ${G.hist[i - 1].san}. Press ⏭ to return to the game.` : 'The starting position. Press ⏭ to return to the game.');
+  else say(G.sayLive || 'Back to the game.');
+  gSide();
+}
+addEventListener('keydown', e => {
+  if (location.hash !== '#play' || !G || G.closed || !document.getElementById('gBoard') || e.target.closest('input,textarea,select') || document.querySelector('#modal .modal')) return;
+  const at = G.view == null ? G.hist.length : G.view, to = { ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: G.hist.length }[e.key];
+  if (to == null) return; e.preventDefault(); gView(to);
+});
 function playerMove(m) {
   if (G.over || G.busy) return;
   if (!G.friend && G.t0) { S.tm.push(Math.min(120, (Date.now() - G.t0) / 1000)); if (S.tm.length > 200) S.tm = S.tm.slice(-200); }
@@ -669,6 +690,7 @@ function playerMove(m) {
   if (!G.over && !G.friend) botTurn();
 }
 function apply(m, byPlayer) {
+  if (G.view != null) { G.view = null; }
   const san = C.san(G.pos, m), after = C.make(G.pos, m);
   G.hist.push({ pos: G.pos, m, san }); G.keys.push(C.fen(after, true));
   G.pos = after;
@@ -697,6 +719,7 @@ async function botTurn() {
 }
 async function gHint() {
   if (G.over || G.busy) return;
+  if (G.view != null) gView(G.hist.length);
   G.busy = true; gSide();
   const r = await think('best', { fen: C.fen(G.pos), depth: 2 });
   G.busy = false; gSide();
@@ -706,6 +729,7 @@ async function gHint() {
 }
 function gUndo() {
   if (!G.hist.length || G.busy) return;
+  G.view = null;
   let n = 1;
   if (!G.friend) { n = G.hist.at(-1).m.piece[0] === G.mine ? 1 : 2; if (n > G.hist.length) n = G.hist.length; }
   let h; for (let i = 0; i < n; i++) { h = G.hist.pop(); G.keys.pop(); }

@@ -386,7 +386,7 @@ function vHomework() {
 M.view('homework', vHomework, { app: true, nav: 'puzzles' });
 
 /* ---------------- classroom ---------------- */
-const CL = { ma: [], mh: [], tab: 'teach', pos: C.parse(C.START), hist: [], preset: 'guided', actor: 'coach', tool: 'move', engine: false, eng: null, think: false, stage: 'mark', poll: null, rec: null, pending: null, log: [], flip: false, msg: '' };
+const CL = { ma: [], mh: [], tab: 'teach', pos: C.parse(C.START), start: C.parse(C.START), line: [], end: null, cut: null, cutAt: 0, hist: [], preset: 'guided', actor: 'coach', tool: 'move', engine: false, eng: null, think: false, stage: 'mark', poll: null, rec: null, pending: null, log: [], flip: false, msg: '' };
 let cB = null, cM = null;
 const PRESETS = { demo: 'Demonstrate: only the coach moves. Students watch and draw.', guided: 'Guided: students propose a move and the coach approves it.', free: 'Free: anyone can move. Good for practice games.' };
 function recEv(e) { if (CL.rec) CL.rec.ev.push(Object.assign({ t: +((Date.now() - CL.rec.t0) / 1000).toFixed(1) }, e)); }
@@ -408,7 +408,7 @@ function cSync() {
   const tool = CL.actor === 'student' && CL.think && CL.stage === 'mark' && !CL.poll ? 'cand' : CL.tool;
   cM.setTool(tool);
   if (tool !== 'cand' && !(CL.think && CL.actor === 'student')) cM.cands = [];
-  cM.render(); cPanel(); M.onClassSync && M.onClassSync();
+  cM.render(); cPanel(); cMoves(); M.onClassSync && M.onClassSync();
 }
 function cSay(t) { CL.msg = t; const e = $('cSay'); if (e) e.textContent = t; M.onClassSync && M.onClassSync(); }
 function cPlay(m, quiet, by) {
@@ -419,7 +419,10 @@ function cPlay(m, quiet, by) {
     CL.log.unshift(e); S().thinks.push(e); if (S().thinks.length > 100) S().thinks = S().thinks.slice(-100); M.store();
     recEv({ k: 'cap', x: 'Thought about ' + cands.join(', ') + ', played ' + san + '.' });
   }
-  CL.hist.push({ pos: CL.pos, m, san }); CL.pos = after; CL.pending = null; cM.cands = []; CL.stage = 'mark';
+  const i = CL.hist.length;
+  if (CL.line.length > i && C.uci(CL.line[i].m) !== C.uci(m)) { CL.cut = CL.line.slice(i); CL.cutAt = i; CL.line = CL.line.slice(0, i); }
+  if (CL.line.length === i) { CL.line.push({ pos: CL.pos, m, san }); CL.end = after; }
+  CL.hist = CL.line.slice(0, i + 1); CL.pos = after; CL.pending = null; cM.cands = []; CL.stage = 'mark';
   cB.fx(m); if (C.inCheck(after)) window.FX.sfx('check');
   recEv({ k: 'mv', u: C.uci(m) });
   const st = C.status(after);
@@ -473,9 +476,43 @@ function cPanel() {
   on('cEnd', () => { CL.poll = null; cSay('Poll closed. Back to the lesson.'); cSync(); });
   const tb = $('cTabs'); if (tb) tb.querySelectorAll('[data-ctl]').forEach(b => b.classList.toggle('on', b.dataset.ctl === CL.tool));
 }
+/* move list: step through the game without losing later moves */
+const plyPos = i => i < CL.line.length ? CL.line[i].pos : (CL.line.length ? CL.end : CL.start);
+function goPly(i) {
+  i = Math.max(0, Math.min(CL.line.length, i));
+  if (i === CL.hist.length) return;
+  CL.hist = CL.line.slice(0, i); CL.pos = plyPos(i); CL.pending = null; CL.stage = 'mark'; if (cM) cM.cands = [];
+  recEv({ k: 'pos', fen: C.fen(CL.pos) });
+  const h = CL.hist.at(-1);
+  cSay(i === 0 ? 'Start position.' : `After ${moveLabel(i - 1)}.` + (i < CL.line.length ? ' Later moves are kept; play a different move to start a new line.' : ''));
+  cSync(); cEngine();
+}
+const moveLabel = k => { const x = CL.line[k]; return x.pos.full + (x.pos.turn === 'w' ? '. ' : '... ') + x.san; };
+function cMoves() {
+  const el = $('cMoves'); if (!el) return;
+  const at = CL.hist.length; let h = '';
+  CL.line.forEach((x, k) => {
+    if (x.pos.turn === 'w' || k === 0) h += `<span class="no">${x.pos.full}.</span>` + (x.pos.turn === 'b' ? '<span class="mvb gap">…</span>' : '');
+    h += `<button class="mvb${at === k + 1 ? ' on' : ''}${k + 1 > at ? ' later' : ''}" data-ply="${k + 1}">${esc(x.san)}</button>`;
+  });
+  el.innerHTML = h || '<span class="muted small" style="grid-column:1/-1">No moves yet. Moves appear here as you play.</span>';
+  el.querySelectorAll('[data-ply]').forEach(b => b.onclick = () => goPly(+b.dataset.ply));
+  const cur = el.querySelector('.on'); if (cur) { const t = cur.offsetTop - el.clientHeight / 2; el.scrollTop = Math.max(0, t); }
+  const lab = $('cPly'); if (lab) lab.textContent = at ? (at < CL.line.length ? `Viewing ${moveLabel(at - 1)}` : `${CL.line.length} move${CL.line.length > 1 ? 's' : ''}`) : CL.line.length ? 'Start position' : '';
+  document.querySelectorAll('[data-nav]').forEach(b => { const n = b.dataset.nav; b.disabled = (n === 'first' || n === 'prev') ? at === 0 : at === CL.line.length; });
+  const cut = $('cCut'); if (cut) cut.innerHTML = CL.cut ? `<button class="btn small alt" id="cRestore">Bring back the line you replaced (${CL.cut.length} move${CL.cut.length > 1 ? 's' : ''})</button>` : '';
+  const rb = $('cRestore'); rb && (rb.onclick = () => { CL.line = CL.line.slice(0, CL.cutAt).concat(CL.cut); const l = CL.line.at(-1); CL.end = C.make(l.pos, l.m); const to = CL.cutAt + 1; CL.cut = null; CL.hist = []; goPly(to); });
+}
+addEventListener('keydown', e => {
+  if (location.hash !== '#class' || CL.tab !== 'teach' || e.target.closest('input,textarea,select,[contenteditable]') || document.querySelector('#modal .modal')) return;
+  const at = CL.hist.length, to = { ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: CL.line.length, ArrowUp: 0, ArrowDown: CL.line.length }[e.key];
+  if (to == null) return; e.preventDefault(); goPly(to);
+});
 function cLoad(fen, hist) {
   CL.pos = C.parse(fen); CL.hist = []; CL.pending = null; CL.poll = null; cM.cands = []; CL.stage = 'mark';
+  CL.start = CL.pos;
   if (hist) { let p = CL.pos; hist.forEach(x => { CL.hist.push({ pos: p, m: x.m, san: x.san }); p = C.make(p, x.m); }); CL.pos = p; }
+  CL.line = CL.hist.slice(); CL.end = CL.pos; CL.cut = null;
   recEv({ k: 'pos', fen: C.fen(CL.pos) }); cSync(); cEngine();
 }
 function validFen(f) { const parts = f.trim().split(/\s+/); if (parts.length < 2 || parts[0].split('/').length !== 8 || !/^[wb]$/.test(parts[1])) return false;
@@ -528,7 +565,11 @@ function vClass() {
       </div>
       <div class="pip">${M.pipSvg()}<div class="bubble glass" aria-live="polite"><p id="cSay">${esc(CL.msg || 'Make a move, draw an arrow, or start a poll. Everything you do can be recorded as a Lesson Replay.')}</p></div></div>
       <div id="cPanel" class="cpanel"></div>
-      <div class="btns"><button class="btn small alt" id="cUndo">Undo</button><button class="btn small alt" id="cFlip">Flip</button><button class="btn small alt" id="cNew">New game</button></div>
+      <div class="card glass mlist"><div class="row" style="justify-content:space-between"><b>Moves</b><span class="muted small" id="cPly"></span></div>
+        <div class="cmoves" id="cMoves" aria-label="Move list"></div>
+        <div class="navbtns" role="group" aria-label="Step through moves"><button class="btn small alt" data-nav="first" aria-label="First position" title="First position (Home)">⏮</button><button class="btn small alt" data-nav="prev" aria-label="Previous move" title="Previous move (←)">◀</button><button class="btn small alt" data-nav="next" aria-label="Next move" title="Next move (→)">▶</button><button class="btn small alt" data-nav="last" aria-label="Last move" title="Last move (End)">⏭</button></div>
+        <div id="cCut"></div>
+        <div class="btns"><button class="btn small alt" id="cFlip">Flip board</button><button class="btn small alt" id="cNew">New game</button></div></div>
       <div class="card glass rec${CL.rec ? ' on' : ''}">
         ${CL.rec ? `<div class="row"><span class="dot"></span><b>Recording</b><span id="cRecT" class="muted">${fmtT((Date.now() - CL.rec.t0) / 1000)}</span></div>
           <div class="row"><input id="cCap" placeholder="Add a caption students will read" aria-label="Caption"><button class="btn small alt" id="cCapB">Add</button></div>
@@ -570,7 +611,7 @@ function vClass() {
   $('cEng').onclick = () => { CL.engine = !CL.engine; $('cEng').setAttribute('aria-checked', CL.engine); cSay(CL.engine ? 'Engine revealed. Students now see the evaluation and best lines.' : 'Engine hidden again.'); cEngine(); };
   const pb = $('cPoll'); pb && (pb.onclick = () => { CL.poll = { v: {}, n: 0, show: false }; CL.pending = null; recEv({ k: 'cap', x: 'Class poll: what would you play here?' }); cSay('Poll open. Every student taps a move; each move on the board now counts as one vote.'); vClass(); });
   $('cHw').onclick = () => setHomework();
-  $('cUndo').onclick = () => { const h = CL.hist.pop(); if (!h) return; CL.pos = h.pos; CL.pending = null; recEv({ k: 'pos', fen: C.fen(CL.pos) }); cSync(); cEngine(); };
+  V.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => { const at = CL.hist.length; goPly({ first: 0, prev: at - 1, next: at + 1, last: CL.line.length }[b.dataset.nav]); });
   $('cFlip').onclick = () => { CL.flip = !CL.flip; cSync(); };
   $('cNew').onclick = () => cLoad(C.START);
   $('cRec').onclick = recToggle;
