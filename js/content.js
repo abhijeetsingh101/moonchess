@@ -143,9 +143,9 @@ window.CONTENT = (function () {
   ];
 
   const bots = [
-    { id: 'sleepy', name: 'Sleepy Bot', desc: 'Yawns a lot and makes silly mistakes. Perfect for your first games.', xp: 40, color: '#8ad8ff' },
-    { id: 'cadet', name: 'Cadet Bot', desc: 'Knows the rules and grabs free pieces. A fair fight.', xp: 80, color: '#ffd84a' },
-    { id: 'captain', name: 'Captain Bot', desc: 'Thinks ahead and punishes mistakes. For brave players!', xp: 150, color: '#ff4fd8' }
+    { id: 'sleepy', name: 'Sleepy Bot', desc: 'Yawns a lot and makes silly mistakes. Perfect for your first games.', xp: 40, color: '#1f8fd1' },
+    { id: 'cadet', name: 'Cadet Bot', desc: 'Knows the rules and grabs free pieces. A fair fight.', xp: 80, color: '#c98a00' },
+    { id: 'captain', name: 'Captain Bot', desc: 'Thinks ahead and punishes mistakes. For brave players!', xp: 150, color: '#c42d8f' }
   ];
 
   // test(s) receives the save state
@@ -171,11 +171,11 @@ window.CONTENT = (function () {
   function chapterDone(s, id) { return chapters.find(c => c.id === id).missions.every(m => s.done[m.id] > 0); }
 
   const themes = [
-    { id: 'nebula', name: 'Nebula', need: 'Cadet', l: '#93a7f0', l2: '#8097e8', d: '#1d2a70', d2: '#18225e', glow: '#3ef2ff' },
-    { id: 'mars', name: 'Mars base', need: 'Pilot', l: '#eab392', l2: '#dea07c', d: '#6e2c1f', d2: '#5c2419', glow: '#ffb35a' },
-    { id: 'aurora', name: 'Aurora', need: 'Navigator', l: '#93e2ca', l2: '#7bd5ba', d: '#14524a', d2: '#10433c', glow: '#6dffc4' },
+    { id: 'nebula', name: 'Nebula', need: 'Cadet', l: '#eef2ff', l2: '#eef2ff', d: '#8fa4ef', d2: '#8fa4ef', glow: '#3ef2ff' },
+    { id: 'mars', name: 'Mars base', need: 'Pilot', l: '#fbe9dc', l2: '#fbe9dc', d: '#e0967a', d2: '#e0967a', glow: '#ffb35a' },
+    { id: 'aurora', name: 'Aurora', need: 'Navigator', l: '#e6f8f0', l2: '#e6f8f0', d: '#74c7aa', d2: '#74c7aa', glow: '#6dffc4' },
     { id: 'classic', name: 'Classic', need: 'Captain', l: '#f0d9b5', l2: '#e8cfa6', d: '#b58863', d2: '#a37752', glow: '#ffe08a' },
-    { id: 'gold', name: 'Golden fleet', need: 'Admiral', l: '#ead27e', l2: '#dec366', d: '#5e4c13', d2: '#4c3d0e', glow: '#ffd84a' }
+    { id: 'gold', name: 'Golden fleet', need: 'Admiral', l: '#fdf3d0', l2: '#fdf3d0', d: '#dcb85a', d2: '#dcb85a', glow: '#ffd84a' }
   ];
   const skins = [
     { id: 'classic', name: 'Classic Pip', need: null, body: '#c9d6ff', trim: '#5a6bd8', eye: '#3ef2ff' },

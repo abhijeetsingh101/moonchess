@@ -9,7 +9,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 /* ---------------- save state ---------------- */
 const DEF = { v: 1, xp: 0, done: {}, puzzles: {}, daily: {}, days: [], bestStreak: 0, wins: { sleepy: 0, cadet: 0, captain: 0 },
   games: 0, theme: 'nebula', skin: 'classic', sound: true, fx: true, badges: {}, rank: 0,
-  prefs: { bot: 'sleepy', color: 'w' } };
+  prefs: { bot: 'sleepy', color: 'w' },
+  log: [], deck: [], hw: [], replays: [], classes: [], thinks: [], tm: [], games2: [],
+  pulse: { child: '', coach: '', note: '', sent: '' } };
 const clone = o => JSON.parse(JSON.stringify(o));
 function merge(s) { const d = clone(DEF); if (!s || typeof s !== 'object') return d;
   for (const k in d) if (k in s) d[k] = (d[k] && typeof d[k] === 'object' && !Array.isArray(d[k])) ? Object.assign(d[k], s[k]) : s[k];
@@ -38,6 +40,7 @@ function rankInfo() {
   return { i, name: r.name, next: nx, pct: nx ? Math.round((S.xp - r.xp) / (nx.xp - r.xp) * 100) : 100 };
 }
 function addXp(n) { S.xp += n; }
+function logAct(k, x) { S.log.push(Object.assign({ d: today(), k }, x || {})); if (S.log.length > 600) S.log = S.log.slice(-600); }
 
 /* toasts */
 const tq = []; let tbusy = false;
@@ -108,7 +111,7 @@ function ask(title, text, yes, no) {
 }
 function promoPick(color) {
   return new Promise(res => modal(`<h3>Power-up!</h3><p>What should your pawn become?</p>
-    <div class="promo">${'QRBN'.split('').map(t => `<button class="glass" data-t="${t}" aria-label="${PNAME[t]}" style="${color === 'b' ? 'color:#ff9be9' : ''}">${GLYPH[t]}</button>`).join('')}</div>`,
+    <div class="promo">${'QRBN'.split('').map(t => `<button class="glass" data-t="${t}" aria-label="${PNAME[t]}"><span class="pc p-${color}${t}"></span></button>`).join('')}</div>`,
     (m, close) => m.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { close(); res(b.dataset.t); })));
 }
 
@@ -152,9 +155,8 @@ class Board {
   mv(e) {
     const d = this.drag; if (!d) return;
     if (!d.g && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) {
-      d.g = document.createElement('div'); d.g.className = 'ghost' + (this.mine === 'b' ? ' b' : '');
-      d.g.textContent = GLYPH[this.pos.b[d.i][1]];
-      d.g.style.fontSize = (this.el.clientWidth / 8 * .9) + 'px';
+      d.g = document.createElement('div'); d.g.className = 'ghost pc p-' + this.pos.b[d.i];
+      const gs = this.el.clientWidth / 8 * 1.05; d.g.style.width = d.g.style.height = gs + 'px';
       document.body.appendChild(d.g);
       const pc = this.el.querySelector(`[data-i="${d.i}"] .pc`); pc && pc.classList.add('dragging');
     }
@@ -204,7 +206,7 @@ class Board {
       let inner = '';
       if (col === 0) inner += `<span class="c r">${r + 1}</span>`;
       if (row === 7) inner += `<span class="c f">${'abcdefgh'[f]}</span>`;
-      if (x) inner += `<span class="pc ${x[0]}" data-t="${x[1]}">${GLYPH[x[1]]}</span>`;
+      if (x) inner += `<span class="pc p-${x}"></span>`;
       else if (this.stars.has(i)) inner += '<svg class="star" aria-hidden="true"><use href="#star"/></svg>';
       const lab = C.sqName(i) + (x ? ', ' + (x[0] === 'w' ? 'white ' : 'black ') + PNAME[x[1]] : this.stars.has(i) ? ', star' : '') + (ts.has(i) ? ', move here' : '');
       h += `<button type="button" class="${cls.join(' ')}" data-i="${i}" aria-label="${lab}"${ts.has(i) || mine ? '' : ' tabindex="-1"'}>${inner}</button>`;
@@ -249,7 +251,7 @@ function mini(fen) {
   const flip = p.turn === 'b';
   for (let row = 0; row < 8; row++) for (let col = 0; col < 8; col++) {
     const r = flip ? row : 7 - row, f = flip ? 7 - col : col, x = p.b[r * 8 + f];
-    h += `<i class="${(r + f) % 2 === 0 ? 'd' : ''}">${x ? `<span class="${x[0]}" data-t="${x[1]}">${GLYPH[x[1]]}</span>` : ''}</i>`;
+    h += `<i class="${(r + f) % 2 === 0 ? 'd' : ''}">${x ? `<span class="pc p-${x}"></span>` : ''}</i>`;
   }
   return `<div class="mini" aria-hidden="true">${h}</div>`;
 }
@@ -267,31 +269,46 @@ function mood(m, ms) {
 if (FX.reduced) document.querySelectorAll('#pip animate, #pip animateTransform').forEach(x => x.remove());
 
 /* ---------------- views ---------------- */
-const VIEWS = ['home', 'learn', 'mission', 'play', 'puzzles', 'me'];
+const VIEWS = { hub: vHub, learn: vLearn, play: vPlay, puzzles: vPuzzles, me: vMe, mission: () => { } };
+const APPV = new Set(['hub', 'learn', 'mission', 'play', 'puzzles', 'me']);
+let curV = '';
 function route() {
   let v = location.hash.slice(1) || 'home';
-  if (!VIEWS.includes(v)) v = 'home';
+  if (/^join-[A-Za-z0-9]+$/.test(v)) { MC.joinCode = v.slice(5).toUpperCase(); v = 'join'; }
+  if (!VIEWS[v]) v = 'home';
   if (v === 'mission' && !T) v = 'learn';
+  const prev = curV; curV = v;
+  if (prev && prev !== v && MC.leave[prev]) MC.leave[prev]();
   document.querySelectorAll('.view').forEach(x => x.classList.remove('on'));
   $(v === 'mission' ? 'v-train' : 'v-' + v).classList.add('on');
-  const navV = v === 'mission' ? (T && T.kind === 'mission' ? 'learn' : 'puzzles') : v;
+  const navV = v === 'mission' ? (T && T.kind === 'mission' ? 'learn' : 'puzzles') : (MC.navOf[v] || v);
   document.querySelectorAll('[data-v]').forEach(a => a.classList.toggle('on', a.dataset.v === navV));
-  ({ home: vHome, learn: vLearn, play: vPlay, puzzles: vPuzzles, me: vMe, mission: () => { } })[v]();
+  document.body.dataset.side = APPV.has(v) || MC.appViews.has(v) ? 'app' : 'site';
+  VIEWS[v]();
   scrollTo({ top: 0 });
 }
 function go(v) { if (location.hash === '#' + v) route(); else location.hash = v; }
 
-function vHome() {
+function vHub() {
   const r = rankInfo(), nm = nextMission(), dp = dailyPuzzle(), dDone = !!S.daily[today()];
   const doneN = ALL.filter(m => S.done[m.id]).length, bN = Object.keys(S.badges).length;
   const st = streak(), first = !S.days.length;
-  $('v-home').innerHTML = `
+  $('v-hub').innerHTML = `
   <div class="hero glass">${pipSvg('pipbig')}
-    <div><h2>${first ? 'Welcome to MoonChess!' : 'Welcome back, cadet!'}</h2>
+    <div><h2>${first ? 'Welcome to MoonChess!' : 'Welcome back!'}</h2>
     <p class="muted" style="margin:0">${first ? 'I\'m Pip, your MoonChess co-pilot. We\'ll learn one tiny mission at a time. No rush, no pressure.' : st > 1 ? `You\'re on a ${st}-day streak. Keep the engines running!` : 'Ready for today\'s training? Every mission makes you stronger.'}</p>
     <div class="rankrow"><span class="rank">${r.name.toUpperCase()}</span>${bar(r.pct)}<span class="muted" style="font-size:14px">${r.next ? `${S.xp} / ${r.next.xp} XP to ${r.next.name}` : S.xp + ' XP · top rank!'}</span></div>
     <div class="btns">${nm ? `<button class="btn" id="hCont">${doneN ? 'Continue' : 'Start'}: ${esc(nm.name)} →</button>` : '<button class="btn" id="hPlay2">All missions done! Play a game →</button>'}
     <a class="btn alt" href="#play">Play the bots</a></div></div></div>
+  <h3 class="sub">What would you like to do?</h3>
+  <div class="actions">${[
+    ['#learn', '<svg><use href="#i-learn"/></svg>', 'Learn', nm ? 'Next: ' + esc(nm.name) : 'All lessons done!'],
+    ['#puzzles', '<svg><use href="#i-puz"/></svg>', 'Solve puzzles', dDone ? 'Daily puzzle solved' : 'Today\'s puzzle is waiting'],
+    ['#play', '<svg><use href="#i-play"/></svg>', 'Play a game', 'Friendly bots or a friend'],
+    ['#deck', '<svg><use href="#i-deck"/></svg>', 'Fix my mistakes', 'Puzzles from your own games'],
+    ['#replay', '<svg><use href="#i-replay"/></svg>', 'Watch my lessons', 'Replays of every class'],
+    ['#join', '<svg><use href="#i-video"/></svg>', 'Join my class', 'Live video with your coach']
+  ].map(([h, ic, t, d]) => `<a class="act glass" href="${h}"><span class="ic">${ic}</span><b>${t}</b><small>${d}</small></a>`).join('')}</div>
   <div class="homegrid">
     <div class="card glass"><div class="row" style="justify-content:space-between"><h3>Daily puzzle</h3><span class="tag ${dDone ? 'ok' : ''}">${dDone ? 'Solved' : '+50 XP'}</span></div>
       ${mini(dp.fen)}<p class="muted" style="margin:0">${esc(dp.tag)} · ${dp.fen.split(' ')[1] === 'w' ? 'White' : 'Black'} to move · mate in ${dp.n}</p>
@@ -304,10 +321,11 @@ function vHome() {
       <div class="row">${K.badges.filter(b => S.badges[b.id]).slice(-4).map(b => `<svg width="42" height="42" aria-label="${esc(b.name)}"><use href="#medal"/></svg>`).join('') || '<span class="muted">Finish your first mission to earn a badge!</span>'}</div>
       <p class="muted" style="margin:0">Wins: Sleepy ${S.wins.sleepy} · Cadet ${S.wins.cadet} · Captain ${S.wins.captain}</p>
       <div class="btns"><a class="btn small alt" href="#me">See profile</a></div></div>
-  </div>`;
+  </div>${MC.hubExtra ? MC.hubExtra() : ''}`;
   const hc = $('hCont'); hc && (hc.onclick = () => openMission(nm));
   const hp = $('hPlay2'); hp && (hp.onclick = () => go('play'));
   $('hDaily').onclick = () => openPuzzle(dp, true);
+  MC.hubWire && MC.hubWire();
 }
 
 function vLearn() {
@@ -328,7 +346,9 @@ function vLearn() {
 function vPuzzles() {
   const dp = dailyPuzzle(), dDone = !!S.daily[today()];
   const n = Object.keys(S.puzzles).length;
-  $('v-puzzles').innerHTML = `<h2 class="title">Puzzles</h2><p class="lede">Find the checkmate! A new daily puzzle lands every day. Solved ${n} of ${K.puzzles.length}.</p>
+  $('v-puzzles').innerHTML = `<h2 class="title">Practice</h2><p class="lede">Your homework, your own mistakes and your lesson replays, then puzzles for extra fuel.</p>
+  ${MC.practiceTop ? MC.practiceTop() : ''}
+  <h3 class="sub">Puzzles <span class="muted">· solved ${n} of ${K.puzzles.length}</span></h3>
   <div class="daily glass">${mini(dp.fen)}<div><span class="tag ${dDone ? 'ok' : ''}">${dDone ? 'Solved today' : 'Daily puzzle · +50 XP bonus'}</span>
     <h3 style="margin:10px 0 4px;font-size:26px">${esc(dp.tag)}</h3><p class="muted" style="margin:0 0 14px">${dp.fen.split(' ')[1] === 'w' ? 'White' : 'Black'} to move. Find checkmate in ${dp.n}.</p>
     <button class="btn" id="pDaily">${dDone ? 'Solve again' : 'Solve today\'s puzzle'}</button></div></div>
@@ -336,13 +356,14 @@ function vPuzzles() {
     <b>${esc(p.name)}</b><small>${esc(p.tag)}</small><span class="tag ${S.puzzles[p.id] ? 'ok' : ''}">${S.puzzles[p.id] ? 'Solved' : 'Mate in ' + p.n}</span></button>`).join('')}</div>`;
   $('pDaily').onclick = () => openPuzzle(dp, true);
   $('v-puzzles').querySelectorAll('[data-p]').forEach(b => b.onclick = () => openPuzzle(K.puzzles.find(p => p.id === b.dataset.p), false));
+  MC.practiceWire && MC.practiceWire();
 }
 
 function vMe() {
   const r = rankInfo(), starsN = ALL.reduce((a, m) => a + (S.done[m.id] || 0), 0);
   let code = ''; try { code = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); } catch (e) { }
   $('v-me').innerHTML = `
-  <div class="hero glass" style="margin-bottom:22px">${pipSvg('pipbig')}<div><h2>Cadet profile</h2>
+  <div class="hero glass" style="margin-bottom:22px">${pipSvg('pipbig')}<div><h2>Your profile</h2>
     <div class="rankrow"><span class="rank">${r.name.toUpperCase()}</span>${bar(r.pct)}<span class="muted" style="font-size:14px">${r.next ? `${r.next.xp - S.xp} XP to ${r.next.name}` : 'Top rank reached!'}</span></div>
     <p class="muted" style="margin:0">Ranks: ${K.ranks.map(x => x.name).join(' → ')}</p></div></div>
   <div class="statgrid">
@@ -350,6 +371,7 @@ function vMe() {
       [Object.keys(S.puzzles).length + '/' + K.puzzles.length, 'Puzzles solved'], [S.games, 'Games played'], [S.wins.sleepy + S.wins.cadet + S.wins.captain, 'Games won'],
       [streak(), 'Day streak'], [S.bestStreak, 'Best streak']].map(([v, l]) => `<div class="stat glass"><b>${v}</b><small>${l}</small></div>`).join('')}
   </div>
+  ${MC.meExtra ? MC.meExtra() : ''}
   <h3 style="margin-bottom:10px">Badges</h3>
   <div class="badges">${K.badges.map(b => `<div class="badge glass${S.badges[b.id] ? '' : ' off'}"><svg aria-hidden="true"><use href="#medal"/></svg><div><b>${esc(b.name)}</b><small>${esc(b.desc)}</small></div></div>`).join('')}</div>
   <h3 style="margin-bottom:10px">Board themes</h3>
@@ -371,7 +393,7 @@ function vMe() {
       <div class="btns" style="margin-top:8px"><button class="btn small alt" id="sLoad">Restore progress</button><span class="muted" id="sMsg"></span></div></div>
     <div class="btns"><button class="btn small alt" id="sReset" style="border-color:#ff3b5c">Reset all progress</button></div>
   </div>`;
-  const V = $('v-me');
+  const V = $('v-me'); MC.meWire && MC.meWire();
   V.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { S.theme = b.dataset.th; store(); applyLook(); vMe(); });
   V.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { S.skin = b.dataset.sk; store(); applyLook(); vMe(); });
   $('sSound').onclick = () => { S.sound = !S.sound; store(); applyLook(); FX.sfx('click'); vMe(); };
@@ -499,7 +521,7 @@ function tWin(r, msg) {
     if (!S.puzzles[it.id]) { S.puzzles[it.id] = 1; xp += 25; }
     if (T.kind === 'daily' && !S.daily[today()]) { S.daily[today()] = it.id; xp += 50; }
   }
-  addXp(xp);
+  addXp(xp); logAct(T.kind === 'mission' ? 'mission' : 'puzzle', { id: it.id, tag: it.tag || '' });
   $('tRate').textContent = stars3(r);
   $('tWinText').textContent = msg + (xp ? ` +${xp} XP` : '');
   $('tWin').hidden = false; $('tReset').hidden = false; $('tHint').hidden = true;
@@ -548,8 +570,8 @@ function vPlay() {
   const pr = S.prefs;
   $('v-play').innerHTML = `<div class="setup"><h2 class="title">Play a game</h2><p class="lede">Pick an opponent. Start with Sleepy Bot: it makes lots of mistakes, so you can practise winning.</p>
   <div class="bots">${K.bots.map(b => `<button class="bot glass${pr.bot === b.id ? ' on' : ''}" data-b="${b.id}" style="color:${b.color}"><svg aria-hidden="true"><use href="#botface"/></svg>
-    <b style="color:#fff">${esc(b.name)}</b><small>${esc(b.desc)}</small><span class="tag">Win: +${b.xp} XP · Won ${S.wins[b.id]}</span></button>`).join('')}
-    <button class="bot glass${pr.bot === 'friend' ? ' on' : ''}" data-b="friend" style="color:#6dffc4">${pipSvg()}<b style="color:#fff">A friend</b><small>Two players on one device. Take turns moving.</small><span class="tag ok">Pass and play</span></button></div>
+    <b>${esc(b.name)}</b><small>${esc(b.desc)}</small><span class="tag">Win: +${b.xp} XP · Won ${S.wins[b.id]}</span></button>`).join('')}
+    <button class="bot glass${pr.bot === 'friend' ? ' on' : ''}" data-b="friend" style="color:#13865a">${pipSvg()}<b>A friend</b><small>Two players on one device. Take turns moving.</small><span class="tag ok">Pass and play</span></button></div>
   <div class="row"><span>Your colour</span><div class="seg glass" role="group" aria-label="Your colour">${[['w', 'White'], ['r', 'Random'], ['b', 'Black']].map(([v, l]) => `<button data-c="${v}" class="${pr.color === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
   <div class="btns"><button class="btn" id="pGo">Launch game →</button></div></div>`;
   const V = $('v-play');
@@ -562,6 +584,7 @@ function startGame() {
   const mine = pr.color === 'r' ? (Math.random() < .5 ? 'w' : 'b') : pr.color;
   const pos = C.parse(C.START);
   G = { friend, bot: pr.bot, mine: friend ? 'w' : mine, pos, hist: [], keys: [C.fen(pos, true)], over: false, closed: false, busy: false, flip: !friend && mine === 'b' };
+  G.t0 = Date.now();
   renderGame(true); scrollTo({ top: 0 });
   if (!friend && G.mine !== pos.turn) botTurn();
   else say(friend ? 'White moves first. Pass the device after each move!' : 'You move first. Tip: start by moving a centre pawn, like e4 or d4!');
@@ -571,8 +594,8 @@ function renderGame(fresh) {
   $('v-play').innerHTML = `<div class="play">
     <div class="boardbox glass"><div class="board" id="gBoard" aria-label="Chess board"></div></div>
     <div class="side">
-      <div class="opp glass" style="color:${G.friend ? '#6dffc4' : bot.color}">${G.friend ? pipSvg() : '<svg aria-hidden="true"><use href="#botface"/></svg>'}
-        <div><b style="color:#fff">${G.friend ? 'Friend match' : esc(bot.name)}</b><small id="gStatus"></small></div></div>
+      <div class="opp glass" style="color:${G.friend ? '#13865a' : bot.color}">${G.friend ? pipSvg() : '<svg aria-hidden="true"><use href="#botface"/></svg>'}
+        <div><b>${G.friend ? 'Friend match' : esc(bot.name)}</b><small id="gStatus"></small></div></div>
       <div class="pip">${pipSvg()}<div class="bubble glass" aria-live="polite"><p id="gSay"></p></div></div>
       <div class="glass card capbox" style="padding:12px 16px"><div class="caps w" id="gCapW" title="Pieces captured by White"></div><div class="caps" id="gCapB" title="Pieces captured by Black"></div></div>
       <div class="moves glass" id="gMoves" aria-label="Move list"></div>
@@ -596,8 +619,8 @@ function gSide() {
   else st.textContent = G.friend ? (turnW ? 'White to move' : 'Black to move') : G.pos.turn === G.mine ? 'Your move' : 'Waiting';
   st.className = '';
   const count = c => { const o = { P: 0, N: 0, B: 0, R: 0, Q: 0 }; G.pos.b.forEach(x => { if (x && x[0] === c && x[1] !== 'K') o[x[1]]++; }); return o; };
-  const lost = c => { const n = count(c); return 'QRBNP'.split('').map(t => GLYPH[t].repeat(Math.max(0, PIECE_SET[t] - n[t]))).join(''); };
-  $('gCapW').textContent = lost('b'); $('gCapB').textContent = lost('w');
+  const lost = c => { const n = count(c); return 'QRBNP'.split('').map(t => `<span class="pc p-${c}${t}"></span>`.repeat(Math.max(0, PIECE_SET[t] - n[t]))).join(''); };
+  $('gCapW').innerHTML = lost('b'); $('gCapB').innerHTML = lost('w');
   $('gMoves').innerHTML = G.hist.reduce((a, h, i) => a + (i % 2 === 0 ? `<span>${i / 2 + 1}.</span>` : '') + `<span>${esc(h.san)}</span>`, '');
   $('gMoves').scrollTop = 1e6;
   $('gEnd').textContent = G.over ? 'New game' : 'Resign';
@@ -605,6 +628,7 @@ function gSide() {
 }
 function playerMove(m) {
   if (G.over || G.busy) return;
+  if (!G.friend && G.t0) { S.tm.push(Math.min(120, (Date.now() - G.t0) / 1000)); if (S.tm.length > 200) S.tm = S.tm.slice(-200); }
   apply(m, true);
   if (!G.over && !G.friend) botTurn();
 }
@@ -633,7 +657,7 @@ async function botTurn() {
   const m = r.uci && C.fromUci(G.pos, r.uci);
   if (!m) return;
   G.board.locked = false;
-  apply(m, false);
+  apply(m, false); G.t0 = Date.now();
 }
 async function gHint() {
   if (G.over || G.busy) return;
@@ -668,7 +692,8 @@ function endGame(st) {
     draw = true; xp = 20; title = 'It\'s a draw!';
     text = { stalemate: 'Stalemate: no legal moves, but not in check.', fifty: '50 moves without a capture or pawn move.', insufficient: 'Not enough pieces left to checkmate.', repetition: 'The same position happened three times.' }[st];
   }
-  S.games++; addXp(xp);
+  S.games++; addXp(xp); logAct('game', { res: win ? 'win' : draw ? 'draw' : 'loss', bot: G.friend ? 'friend' : G.bot });
+  MC.onGameEnd && MC.onGameEnd(G);
   if (win || (G.friend && st === 'checkmate')) { FX.party($('gBoard')); FX.sfx('win'); } else FX.sfx(draw ? 'move' : 'lose');
   say(text); gSide(); afterProgress();
   const face = win || G.friend || draw ? 'happy' : 'oops'; mood(face);
@@ -698,10 +723,12 @@ function centrePieces() {
     st.textContent = css;
   } catch (e) { }
 }
-centrePieces();
-try { document.fonts.load('40px ' + FONT, '♚♟').then(centrePieces, () => { }); document.fonts.ready.then(centrePieces); } catch (e) { }
+/* pieces are drawn images now, so the glyph-centring above is no longer needed */
 
-/* ---------------- boot ---------------- */
-addEventListener('hashchange', route);
-applyLook(); hud(); route();
+/* ---------------- shared API for the coaching and site modules ---------------- */
+const MC = window.MC = { leave: {}, navOf: {}, appViews: new Set(),
+  get S() { return S; }, store, toast, afterProgress, logAct, today, dayStr, esc, mini, pipSvg, bar, modal, ask, think, go, mood,
+  Board, GLYPH, PNAME, K, C, openPuzzle, dailyPuzzle, rankInfo, streak, ALL,
+  view(name, fn, opts) { VIEWS[name] = fn; if (opts && opts.app) MC.appViews.add(name); if (opts && opts.nav) MC.navOf[name] = opts.nav; },
+  boot() { addEventListener('hashchange', route); applyLook(); hud(); route(); } };
 }

@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="description" content="MoonChess: learn chess the friendly way with Pip, bite-sized missions, puzzles and friendly bots.">
+<meta name="description" content="MoonChess: the chess coaching platform where students keep improving between lessons. Live classroom, Lesson Replay, Mistake Deck and weekly Parent Pulse.">
+<meta name="theme-color" content="#ffffff">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>MoonChess</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -56,6 +57,14 @@
 <symbol id="i-learn" viewBox="0 0 24 24"><path d="M12 3l10 5-10 5L2 8zM6 10.5V16c3 2.5 9 2.5 12 0v-5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
 <symbol id="i-play" viewBox="0 0 24 24"><path d="M9 21h6M8 18h8l-1-5 2-3-3-1-2-5-2 5-3 1 2 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
 <symbol id="i-puz" viewBox="0 0 24 24"><path d="M4 8h4a2 2 0 1 1 4 0h4v4a2 2 0 1 1 0 4v4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+<symbol id="i-class" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 20h8M12 16v4M7 12l3-3 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-replay" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></symbol>
+<symbol id="i-deck" viewBox="0 0 24 24"><rect x="6" y="3" width="13" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7v12a2 2 0 0 0 2 2h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-video" viewBox="0 0 24 24"><rect x="2.5" y="6" width="13" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 10.5l6-3.5v10l-6-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 20c.8-4 3.4-6 6.5-6s5.7 2 6.5 6M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2 .6 3.2 2.5 3.6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
 <symbol id="i-me" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c1-5 5-7 8-7s7 2 8 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
 </defs>
 </svg>
@@ -63,10 +72,15 @@
 <header>
   <div class="wrap">
     <a class="brand" href="#home" aria-label="MoonChess home"><svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><use href="#moonmark"/></svg><b>MoonChess</b></a>
-    <nav class="nav" aria-label="Main">
-      <a href="#home" data-v="home">Home</a><a href="#learn" data-v="learn">Learn</a><a href="#play" data-v="play">Play</a><a href="#puzzles" data-v="puzzles">Puzzles</a><a href="#me" data-v="me">Me</a>
+    <nav class="nav site-only" aria-label="Site">
+      <a href="#home" data-v="home">Home</a><a href="#players" data-v="players">For players</a><a href="#coaches" data-v="coaches">For coaches</a><a href="#academies" data-v="academies">Academies</a><a href="#parents" data-v="parents">Parents</a><a href="#pricing" data-v="pricing">Pricing</a><a href="#tools" data-v="tools">Free tools</a>
     </nav>
-    <div class="hud">
+    <a class="btn small alt site-only cta" href="#join">Join a class</a>
+    <a class="btn small site-only" href="#hub">Start free</a>
+    <nav class="nav app-only" aria-label="App">
+      <a href="#hub" data-v="hub">Hub</a><a href="#learn" data-v="learn">Learn</a><a href="#play" data-v="play">Play</a><a href="#puzzles" data-v="puzzles">Practice</a><a href="#class" data-v="class">Classroom</a><a href="#me" data-v="me">Me</a>
+    </nav>
+    <div class="hud app-only">
       <span class="chip glass" title="Days in a row"><svg aria-hidden="true"><use href="#flame"/></svg><span id="hudStreak">0</span></span>
       <span class="chip glass xp" title="Experience points">XP <span id="hudXp">0</span></span>
     </div>
@@ -74,7 +88,20 @@
 </header>
 
 <main>
-  <section class="view wrap" id="v-home"></section>
+  <section class="view" id="v-home"></section>
+  <section class="view" id="v-players"></section>
+  <section class="view" id="v-coaches"></section>
+  <section class="view" id="v-academies"></section>
+  <section class="view" id="v-parents"></section>
+  <section class="view" id="v-pricing"></section>
+  <section class="view" id="v-tools"></section>
+  <section class="view" id="v-guides"></section>
+  <section class="view wrap" id="v-hub"></section>
+  <section class="view wrap" id="v-class"></section>
+  <section class="view wrap" id="v-replay"></section>
+  <section class="view wrap" id="v-deck"></section>
+  <section class="view wrap" id="v-homework"></section>
+  <section class="view wrap" id="v-join"></section>
   <section class="view wrap" id="v-learn"></section>
   <section class="view wrap" id="v-train">
     <div class="play">
@@ -95,13 +122,19 @@
   <section class="view wrap" id="v-puzzles"></section>
   <section class="view wrap" id="v-me"></section>
 </main>
-<footer><b style="color:#ffe7a0">MoonChess</b> · Made for curious beginners. Every grandmaster started with mission one.</footer>
+<footer><div class="wrap fgrid">
+  <div><b class="fbrand"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="#moonmark"/></svg>MoonChess</b><p>Chess lessons, practice and live classes in one place. Players keep getting better between lessons, and coaches teach with less admin. Every grandmaster started with mission one.</p></div>
+  <div><b>Product</b><a href="#players">For players</a><a href="#coaches">For coaches</a><a href="#academies">For academies</a><a href="#parents">For parents</a><a href="#pricing">Pricing</a></div>
+  <div><b>Free</b><a href="#tools">Scoresheet to PGN</a><a href="#tools">Puzzle of the day</a><a href="#guides">Teaching guides</a></div>
+  <div><b>App</b><a href="#hub">Student hub</a><a href="#class">Coach classroom</a><a href="#join">Join a live class</a><a href="#puzzles">Practice</a></div>
+</div></footer>
 
-<nav class="tabs" aria-label="Main">
-  <a class="tab" href="#home" data-v="home"><svg aria-hidden="true"><use href="#i-home"/></svg>Home</a>
+<nav class="tabs app-only" aria-label="App">
+  <a class="tab" href="#hub" data-v="hub"><svg aria-hidden="true"><use href="#i-home"/></svg>Hub</a>
   <a class="tab" href="#learn" data-v="learn"><svg aria-hidden="true"><use href="#i-learn"/></svg>Learn</a>
   <a class="tab" href="#play" data-v="play"><svg aria-hidden="true"><use href="#i-play"/></svg>Play</a>
-  <a class="tab" href="#puzzles" data-v="puzzles"><svg aria-hidden="true"><use href="#i-puz"/></svg>Puzzles</a>
+  <a class="tab" href="#puzzles" data-v="puzzles"><svg aria-hidden="true"><use href="#i-puz"/></svg>Practice</a>
+  <a class="tab" href="#class" data-v="class"><svg aria-hidden="true"><use href="#i-class"/></svg>Class</a>
   <a class="tab" href="#me" data-v="me"><svg aria-hidden="true"><use href="#i-me"/></svg>Me</a>
 </nav>
 <div id="modal"></div>
@@ -111,5 +144,10 @@
 <script src="js/content.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/app.js"></script>
+<script src="js/pgn.js"></script>
+<script src="js/coach.js"></script>
+<script src="js/live.js"></script>
+<script src="js/scan.js"></script>
+<script src="js/site.js"></script>
 </body>
 </html>
