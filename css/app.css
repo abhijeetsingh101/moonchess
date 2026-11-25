@@ -557,3 +557,4 @@ background-image:linear-gradient(90deg,#5b3fd6aa 1px,transparent 1px),linear-gra
 @media(max-width:760px){.sc-review{grid-template-columns:minmax(0,1fr)}.palette{grid-template-columns:repeat(7,minmax(0,1fr))}}
 .cropin{position:relative}
 .sc-head{flex-wrap:nowrap}.sc-head h3{flex:1}
+.umarks{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}

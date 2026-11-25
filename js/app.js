@@ -116,16 +116,48 @@ function promoPick(color) {
 }
 
 /* ---------------- board ---------------- */
+/* right-click arrows and circles: green, or red / blue / yellow with Shift / Alt / Ctrl */
+const ACOL = { g: '#2fa86a', r: '#d9364a', b: '#2f6fe0', y: '#f0b400' };
+const colOf = e => e.shiftKey ? 'r' : e.altKey ? 'b' : (e.ctrlKey || e.metaKey) ? 'y' : 'g';
+function arrowD(a, b, w) {
+  const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, px = -uy, py = ux;
+  const hl = Math.min(.42, L * .5), hw = w * 2.6, s = { x: a.x + ux * .22, y: a.y + uy * .22 }, e = { x: b.x - ux * hl, y: b.y - uy * hl };
+  const Q = (p, k) => (p.x + px * k).toFixed(3) + ',' + (p.y + py * k).toFixed(3);
+  return `M${Q(s, w / 2)}L${Q(e, w / 2)}L${Q(e, hw / 2)}L${b.x.toFixed(3)},${b.y.toFixed(3)}L${Q(e, -hw / 2)}L${Q(e, -w / 2)}L${Q(s, -w / 2)}Z`;
+}
 class Board {
   constructor(el, onMove) {
-    Object.assign(this, { el, onMove, pos: null, flip: false, sel: null, mine: 'w', locked: false, stars: new Set(), last: null, hint: [], drag: null });
+    Object.assign(this, { el, onMove, pos: null, flip: false, sel: null, mine: 'w', locked: false, stars: new Set(), last: null, hint: [], drag: null, uA: [], uC: [], rd: null, onArrow: null });
+    el.addEventListener('contextmenu', e => e.preventDefault());
     el.addEventListener('pointerdown', e => this.down(e));
     el.addEventListener('pointermove', e => this.mv(e));
     el.addEventListener('pointerup', e => this.up(e));
     el.addEventListener('pointercancel', () => this.cancel());
     el.addEventListener('click', e => { if (e.detail === 0) { const b = e.target.closest('.sq'); if (b) this.tap(+b.dataset.i); } });
   }
-  set(pos, o) { Object.assign(this, o || {}); this.pos = pos; this.sel = null; this.render(); }
+  set(pos, o) { if (this.pos && pos !== this.pos && this.pos.b.join() !== pos.b.join()) { this.uA = []; this.uC = []; } Object.assign(this, o || {}); this.pos = pos; this.sel = null; this.render(); }
+  clearMarks() { if (!this.uA.length && !this.uC.length) return false; this.uA = []; this.uC = []; this.drawMarks(); return true; }
+  rdown(e) { const s = this.at(e.clientX, e.clientY); if (s == null) return; e.preventDefault(); this.rd = { s, t: s, c: colOf(e) }; try { this.el.setPointerCapture(e.pointerId); } catch (er) { } }
+  rmove(e) { const t = this.at(e.clientX, e.clientY); if (t != null && t !== this.rd.t) { this.rd.t = t; this.drawMarks(); } }
+  rup(e) {
+    const r = this.rd; this.rd = null; if (!r) return;
+    const t = this.at(e.clientX, e.clientY); if (t == null) return this.drawMarks();
+    if (this.onArrow) { this.onArrow(r.s, t, r.c); return this.drawMarks(); }
+    if (t === r.s) { const k = this.uC.findIndex(x => x[0] === t); if (k >= 0 && this.uC[k][1] === r.c) this.uC.splice(k, 1); else { if (k >= 0) this.uC.splice(k, 1); this.uC.push([t, r.c]); } }
+    else { const k = this.uA.findIndex(x => x[0] === r.s && x[1] === t); if (k >= 0 && this.uA[k][2] === r.c) this.uA.splice(k, 1); else { if (k >= 0) this.uA.splice(k, 1); this.uA.push([r.s, t, r.c]); } }
+    this.drawMarks();
+  }
+  drawMarks() {
+    let svg = this.el.querySelector('svg.umarks');
+    if (!svg) { svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'umarks'); svg.setAttribute('viewBox', '0 0 8 8'); svg.setAttribute('aria-hidden', 'true'); this.el.appendChild(svg); }
+    const xy = i => { const f = i & 7, r = i >> 3; return this.flip ? { x: 7 - f + .5, y: r + .5 } : { x: f + .5, y: 7 - r + .5 }; };
+    let h = '';
+    this.uC.forEach(([i, c]) => { const p = xy(i); h += `<circle cx="${p.x}" cy="${p.y}" r=".45" fill="none" stroke="${ACOL[c]}" stroke-width=".08" opacity=".9"/>`; });
+    this.uA.forEach(([a, b, c]) => { h += `<path d="${arrowD(xy(a), xy(b), .16)}" fill="${ACOL[c]}" opacity=".82"/>`; });
+    const r = this.rd; if (r && r.t !== r.s) h += `<path d="${arrowD(xy(r.s), xy(r.t), .16)}" fill="${ACOL[r.c]}" opacity=".5"/>`;
+    else if (r) { const p = xy(r.s); h += `<circle cx="${p.x}" cy="${p.y}" r=".45" fill="none" stroke="${ACOL[r.c]}" stroke-width=".08" opacity=".5"/>`; }
+    svg.innerHTML = h;
+  }
   can() { return !this.locked && this.pos && this.pos.turn === this.mine; }
   own(i) { const x = this.pos.b[i]; return !!x && x[0] === this.mine; }
   from(i) { return i == null ? [] : C.legal(this.pos, i); }
@@ -142,6 +174,8 @@ class Board {
     this.sel = null; this.onMove(m);
   }
   down(e) {
+    if (e.button === 2) return this.rdown(e);
+    if (e.button === 0) this.clearMarks();
     const b = e.target.closest('.sq'); if (!b || !this.can()) return;
     const i = +b.dataset.i;
     if (this.sel != null && this.from(this.sel).some(m => m.to === i)) { e.preventDefault(); return this.tap(i); }
@@ -153,6 +187,7 @@ class Board {
     } else if (this.sel != null) { this.sel = null; this.render(); }
   }
   mv(e) {
+    if (this.rd) return this.rmove(e);
     const d = this.drag; if (!d) return;
     if (!d.g && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) {
       d.g = document.createElement('div'); d.g.className = 'ghost pc p-' + this.pos.b[d.i];
@@ -168,6 +203,7 @@ class Board {
     }
   }
   up(e) {
+    if (this.rd || e.button === 2) return this.rup(e);
     const d = this.drag; this.drag = null; if (!d) return;
     if (d.g) {
       d.g.remove();
@@ -211,7 +247,7 @@ class Board {
       const lab = C.sqName(i) + (x ? ', ' + (x[0] === 'w' ? 'white ' : 'black ') + PNAME[x[1]] : this.stars.has(i) ? ', star' : '') + (ts.has(i) ? ', move here' : '');
       h += `<button type="button" class="${cls.join(' ')}" data-i="${i}" aria-label="${lab}"${ts.has(i) || mine ? '' : ' tabindex="-1"'}>${inner}</button>`;
     }
-    this.el.innerHTML = h;
+    this.el.innerHTML = h; this.drawMarks();
   }
   center(i) { const b = this.el.querySelector(`[data-i="${i}"]`); if (!b) return { x: innerWidth / 2, y: innerHeight / 2 };
     const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }

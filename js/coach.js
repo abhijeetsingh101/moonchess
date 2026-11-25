@@ -60,6 +60,7 @@ class Marks {
     Object.assign(this, { svg, flip: false, tool: 'move', arrows: [], highs: [], cands: [], poll: null, engine: null, pending: null, laser: [], tmp: null, onChange: null, onCand: null, pos: null, raf: 0 });
     svg.setAttribute('viewBox', '0 0 8 8');
     svg.addEventListener('pointerdown', e => this.down(e));
+    svg.addEventListener('contextmenu', e => e.preventDefault());
     svg.addEventListener('pointermove', e => this.mv(e));
     svg.addEventListener('pointerup', e => this.up(e));
     svg.addEventListener('pointercancel', () => { this.tmp = null; this.drag = null; this.render(); });
@@ -86,7 +87,7 @@ class Marks {
     const s = this.sq(this.pt(e)); if (d.s == null || s == null) return this.render();
     if (this.tool === 'cand') { if (s !== d.s) this.onCand && this.onCand(d.s, s); return this.render(); }
     if (s === d.s) { const k = this.highs.indexOf(s); k >= 0 ? this.highs.splice(k, 1) : this.highs.push(s); }
-    else { const k = this.arrows.findIndex(a => a[0] === d.s && a[1] === s); k >= 0 ? this.arrows.splice(k, 1) : this.arrows.push([d.s, s]); }
+    else { const k = this.arrows.findIndex(a => a[0] === d.s && a[1] === s); k >= 0 ? this.arrows.splice(k, 1) : this.arrows.push([d.s, s, e.shiftKey ? 'r' : e.altKey ? 'b' : (e.ctrlKey || e.metaKey) ? 'y' : 'g']); }
     this.render(); this.onChange && this.onChange();
   }
   clear() { this.arrows.length = 0; this.highs.length = 0; this.render(); this.onChange && this.onChange(); }
@@ -110,7 +111,8 @@ class Marks {
         h += `<text x="${q.x}" y="${q.y - .3}" class="mt">${Math.round(n / tot * 100)}%</text>`;
       });
     }
-    this.arrows.forEach(a => { h += arr(a, '#ffd84a', .17, .88); });
+    const AC = { g: '#2fa86a', r: '#d9364a', b: '#2f6fe0', y: '#f0b400' };
+    this.arrows.forEach(a => { h += arr(a, AC[a[2]] || '#ffd84a', .17, .88); });
     if (this.engine) h += arr(this.engine, '#3ef2ff', .14, .8);
     if (this.pending) h += arr(this.pending, '#8a5cff', .2, .95);
     this.cands.forEach((a, k) => { const q = this.xy(a[1]); h += arr(a, '#6dffc4', .15, .9) + `<circle cx="${q.x}" cy="${q.y}" r=".22" fill="#0b1240" stroke="#6dffc4" stroke-width=".05"/><text x="${q.x}" y="${q.y + .1}" class="mt">${k + 1}</text>`; });
@@ -519,7 +521,7 @@ function vClass() {
         <div class="row"><span class="lbl">Permissions</span>${seg('cp', [['demo', 'Demonstrate'], ['guided', 'Guided'], ['free', 'Free']], CL.preset, 'Move permissions')}</div>
         <p class="muted small">${PRESETS[CL.preset]}</p>
         <div class="row" id="cTabs"><span class="lbl">Tool</span><div class="seg glass" role="group" aria-label="Board tool">${[['move', 'Move'], ['arrow', 'Draw'], ['laser', 'Laser']].map(([v, l]) => `<button data-ctl="${v}" class="${CL.tool === v ? 'on' : ''}">${l}</button>`).join('')}</div><button class="btn small alt" id="cClr">Clear marks</button></div>
-        <p class="muted small">Draw: drag for an arrow, tap a square to highlight it. Laser: a pointer trail that fades after a few seconds.</p>
+        <p class="muted small">Right-click and drag for an arrow, right-click a square to highlight it (Shift, Alt or Ctrl for red, blue, yellow). Left-click clears. On touch screens use Draw. Laser: a pointer trail that fades.</p>
         <div class="toggle"><span><b>Think First</b> <small class="muted">students mark up to 3 candidates before moving</small></span>${sw('cThink', CL.think, 'Think First')}</div>
         <div class="toggle"><span><b>Engine</b> <small class="muted">hidden from students until you reveal it</small></span>${sw('cEng', CL.engine, 'Reveal engine')}</div>
         <div class="btns">${CL.poll ? '' : '<button class="btn small" id="cPoll">Ask the class: what would you play?</button>'}<button class="btn small alt" id="cHw">Set as homework</button></div>
@@ -546,6 +548,12 @@ function vClass() {
       <div class="card glass"><h3>Lesson replays</h3>${replayList()}</div>
     </div>`;
   cB = new M.Board($('cBoard'), cMove); cM = new Marks($('cMarks')); cM.arrows = CL.ma; cM.highs = CL.mh;
+  cB.onArrow = (a, b, c) => {
+    if (a === b) { const k = cM.highs.indexOf(a); k >= 0 ? cM.highs.splice(k, 1) : cM.highs.push(a); }
+    else { const k = cM.arrows.findIndex(x => x[0] === a && x[1] === b); if (k >= 0 && (cM.arrows[k][2] || 'g') === c) cM.arrows.splice(k, 1); else { if (k >= 0) cM.arrows.splice(k, 1); cM.arrows.push([a, b, c]); } }
+    cM.render(); cM.onChange && cM.onChange();
+  };
+  cB.clearMarks = () => { if (!cM.arrows.length && !cM.highs.length) return false; cM.clear(); return true; };
   cM.onChange = () => recMarks();
   cM.onCand = (a, b) => {
     if (!C.legal(CL.pos).some(x => x.from === a && x.to === b)) { cSay('That isn\'t a legal move. Candidates must be moves you could really play.'); return; }
