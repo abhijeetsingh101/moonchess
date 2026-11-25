@@ -570,3 +570,10 @@ background-image:linear-gradient(90deg,#5b3fd6aa 1px,transparent 1px),linear-gra
 .navbtns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .navbtns .btn{min-height:40px;padding:6px 0;font-size:16px}
 .moves{align-items:center}
+/* classroom: moves under the board */
+.cl-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.mlist.under .cmoves{grid-template-columns:repeat(2,38px minmax(0,1fr) minmax(0,1fr));max-height:180px}
+.mlist.under{flex-direction:column}
+.mlist.under .navbtns{grid-template-columns:repeat(4,minmax(0,1fr))}
+.mlist.under .ctlrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+@media(max-width:600px){.mlist.under .cmoves{grid-template-columns:38px 1fr 1fr}}

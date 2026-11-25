@@ -550,7 +550,14 @@ function vClass() {
   if (CL.tab === 'pulse') return cPulse(body);
   if (CL.tab === 'schedule') return cSchedule(body);
   body.innerHTML = `<div class="play cls">
+    <div class="cl-main">
     <div class="boardbox glass">${boardHtml('cBoard', 'cMarks')}</div>
+    <div class="card glass mlist under"><div class="row" style="justify-content:space-between"><b>Moves</b><span class="muted small" id="cPly"></span></div>
+        <div class="cmoves" id="cMoves" aria-label="Move list"></div>
+        <div class="navbtns" role="group" aria-label="Step through moves"><button class="btn small alt" data-nav="first" aria-label="First position" title="First position (Home)">⏮</button><button class="btn small alt" data-nav="prev" aria-label="Previous move" title="Previous move (←)">◀</button><button class="btn small alt" data-nav="next" aria-label="Next move" title="Next move (→)">▶</button><button class="btn small alt" data-nav="last" aria-label="Last move" title="Last move (End)">⏭</button></div>
+        <div id="cCut"></div>
+        <div class="btns"><button class="btn small alt" id="cFlip">Flip board</button><button class="btn small alt" id="cNew">New game</button></div></div>
+    </div>
     <div class="side">
       <div id="liveBox"></div>
       <div class="card glass ctl">
@@ -565,11 +572,6 @@ function vClass() {
       </div>
       <div class="pip">${M.pipSvg()}<div class="bubble glass" aria-live="polite"><p id="cSay">${esc(CL.msg || 'Make a move, draw an arrow, or start a poll. Everything you do can be recorded as a Lesson Replay.')}</p></div></div>
       <div id="cPanel" class="cpanel"></div>
-      <div class="card glass mlist"><div class="row" style="justify-content:space-between"><b>Moves</b><span class="muted small" id="cPly"></span></div>
-        <div class="cmoves" id="cMoves" aria-label="Move list"></div>
-        <div class="navbtns" role="group" aria-label="Step through moves"><button class="btn small alt" data-nav="first" aria-label="First position" title="First position (Home)">⏮</button><button class="btn small alt" data-nav="prev" aria-label="Previous move" title="Previous move (←)">◀</button><button class="btn small alt" data-nav="next" aria-label="Next move" title="Next move (→)">▶</button><button class="btn small alt" data-nav="last" aria-label="Last move" title="Last move (End)">⏭</button></div>
-        <div id="cCut"></div>
-        <div class="btns"><button class="btn small alt" id="cFlip">Flip board</button><button class="btn small alt" id="cNew">New game</button></div></div>
       <div class="card glass rec${CL.rec ? ' on' : ''}">
         ${CL.rec ? `<div class="row"><span class="dot"></span><b>Recording</b><span id="cRecT" class="muted">${fmtT((Date.now() - CL.rec.t0) / 1000)}</span></div>
           <div class="row"><input id="cCap" placeholder="Add a caption students will read" aria-label="Caption"><button class="btn small alt" id="cCapB">Add</button></div>
