@@ -535,59 +535,63 @@ async function recToggle() {
   if (wantMic) { try { CL.rec.voice = await startVoice(); } catch (e) { cSay('No microphone here, so this replay records the board and captions only.'); } }
   CL.rec.ev.push({ t: 0, k: 'pos', fen: C.fen(CL.pos) }, { t: 0, k: 'ch', x: 'Start' });
   recMarks();
-  CL.rec.tick = setInterval(() => { const e = $('cRecT'); if (e && CL.rec) e.textContent = fmtT((Date.now() - CL.rec.t0) / 1000); }, 500);
+  CL.rec.tick = setInterval(() => { if (!CL.rec) return; const t = fmtT((Date.now() - CL.rec.t0) / 1000); ['cRecT', 'cRecT2'].forEach(id => { const e = $(id); if (e) e.textContent = t; }); }, 500);
+  CL.side = 'record';
   vClass();
 }
 function vClass() {
   const V = $('v-class');
   const tabs = seg('ct', [['teach', 'Teach'], ['homework', 'Homework'], ['pulse', 'Parent Pulse'], ['schedule', 'Schedule']], CL.tab, 'Classroom sections');
-  V.innerHTML = `<div class="row" style="justify-content:space-between"><h2 class="title" style="margin:0">Classroom</h2>${tabs}</div>
-    <p class="lede" style="margin-top:6px">This preview runs on one device: switch "Moving as" to see a student's side. In live classes the coach and students share one board, with video built in.</p>
+  const teach = CL.tab === 'teach'; V.classList.toggle('ws', teach); document.body.classList.toggle('ws-on', teach);
+  V.innerHTML = `<div class="row cl-top"><h2 class="title" style="margin:0">Classroom</h2>${tabs}${CL.rec ? `<button class="recpill" id="cRecPill" title="Show recording controls"><span class="dot"></span>Recording <span id="cRecT2">${fmtT((Date.now() - CL.rec.t0) / 1000)}</span></button>` : ''}</div>
+    ${teach ? '' : '<p class="lede" style="margin-top:6px">Homework, parent updates and your class calendar. The live board is under Teach.</p>'}
     <div id="cBody"></div>`;
   V.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { CL.tab = b.dataset.ct; vClass(); });
+  const pill = $('cRecPill'); pill && (pill.onclick = () => { CL.tab = 'teach'; CL.side = 'record'; vClass(); });
   const body = $('cBody');
   if (CL.tab === 'homework') return cHomework(body);
   if (CL.tab === 'pulse') return cPulse(body);
   if (CL.tab === 'schedule') return cSchedule(body);
-  body.innerHTML = `<div class="play cls">
-    <div class="boardbox glass">${boardHtml('cBoard', 'cMarks')}</div>
-    <div class="side">
+  const side = CL.side || 'teach', pane = (k, html) => `<div class="cl-pane" data-pane="${k}" ${side === k ? '' : 'hidden'}>${html}</div>`;
+  body.innerHTML = `<div class="clsgrid">
+    <aside class="cl-left">
       <div id="liveBox"></div>
-      <div class="card glass ctl">
-        <div class="row"><span class="lbl">Moving as</span>${seg('ca', [['coach', 'Coach'], ['student', 'Student']], CL.actor, 'Moving as')}</div>
-        <div class="row"><span class="lbl">Permissions</span>${seg('cp', [['demo', 'Demonstrate'], ['guided', 'Guided'], ['free', 'Free']], CL.preset, 'Move permissions')}</div>
-        <p class="muted small">${PRESETS[CL.preset]}</p>
-        <div class="row" id="cTabs"><span class="lbl">Tool</span><div class="seg glass" role="group" aria-label="Board tool">${[['move', 'Move'], ['arrow', 'Draw'], ['laser', 'Laser']].map(([v, l]) => `<button data-ctl="${v}" class="${CL.tool === v ? 'on' : ''}">${l}</button>`).join('')}</div><button class="btn small alt" id="cClr">Clear marks</button></div>
-        <p class="muted small">Right-click and drag for an arrow, right-click a square to highlight it (Shift, Alt or Ctrl for red, blue, yellow). Left-click clears. On touch screens use Draw. Laser: a pointer trail that fades.</p>
-        <div class="toggle"><span><b>Think First</b> <small class="muted">students mark up to 3 candidates before moving</small></span>${sw('cThink', CL.think, 'Think First')}</div>
-        <div class="toggle"><span><b>Engine</b> <small class="muted">hidden from students until you reveal it</small></span>${sw('cEng', CL.engine, 'Reveal engine')}</div>
-        <div class="btns">${CL.poll ? '' : '<button class="btn small" id="cPoll">Ask the class: what would you play?</button>'}<button class="btn small alt" id="cHw">Set as homework</button></div>
-      </div>
-      <div class="pip">${M.pipSvg()}<div class="bubble glass" aria-live="polite"><p id="cSay">${esc(CL.msg || 'Make a move, draw an arrow, or start a poll. Everything you do can be recorded as a Lesson Replay.')}</p></div></div>
-      <div id="cPanel" class="cpanel"></div>
       <div class="card glass mlist"><div class="row" style="justify-content:space-between"><b>Moves</b><span class="muted small" id="cPly"></span></div>
         <div class="cmoves" id="cMoves" aria-label="Move list"></div>
         <div class="navbtns" role="group" aria-label="Step through moves"><button class="btn small alt" data-nav="first" aria-label="First position" title="First position (Home)">⏮</button><button class="btn small alt" data-nav="prev" aria-label="Previous move" title="Previous move (←)">◀</button><button class="btn small alt" data-nav="next" aria-label="Next move" title="Next move (→)">▶</button><button class="btn small alt" data-nav="last" aria-label="Last move" title="Last move (End)">⏭</button></div>
         <div id="cCut"></div>
         <div class="btns"><button class="btn small alt" id="cFlip">Flip board</button><button class="btn small alt" id="cNew">New game</button></div></div>
-      <div class="card glass rec${CL.rec ? ' on' : ''}">
-        ${CL.rec ? `<div class="row"><span class="dot"></span><b>Recording</b><span id="cRecT" class="muted">${fmtT((Date.now() - CL.rec.t0) / 1000)}</span></div>
+    </aside>
+    <div class="cl-board"><div class="boardbox glass">${boardHtml('cBoard', 'cMarks')}</div></div>
+    <aside class="cl-right">
+      <div class="cl-status"><div class="pip sm">${M.pipSvg()}<div class="bubble glass" aria-live="polite"><p id="cSay">${esc(CL.msg || 'Make a move, draw an arrow, or start a poll. Everything you do can be recorded as a Lesson Replay.')}</p></div></div>
+        <div id="cPanel" class="cpanel"></div></div>
+      <div class="seg cl-tabs" role="tablist" aria-label="Classroom tools">${[['teach', 'Teach'], ['record', CL.rec ? '● Record' : 'Record'], ['load', 'Load']].map(([k, l]) => `<button role="tab" data-side="${k}" class="${side === k ? 'on' : ''}" aria-selected="${side === k}">${l}</button>`).join('')}</div>
+      ${pane('teach', `<div class="ctl">        <div class="row"><span class="lbl">Moving as</span>${seg('ca', [['coach', 'Coach'], ['student', 'Student']], CL.actor, 'Moving as')}</div>
+        <div class="row"><span class="lbl">Permissions</span>${seg('cp', [['demo', 'Demonstrate'], ['guided', 'Guided'], ['free', 'Free']], CL.preset, 'Move permissions')}</div>
+        <p class="muted small">${PRESETS[CL.preset]}</p>
+        <div class="row" id="cTabs"><span class="lbl">Tool</span><div class="seg glass" role="group" aria-label="Board tool">${[['move', 'Move'], ['arrow', 'Draw'], ['laser', 'Laser']].map(([v, l]) => `<button data-ctl="${v}" class="${CL.tool === v ? 'on' : ''}">${l}</button>`).join('')}</div><button class="btn small alt" id="cClr">Clear marks</button></div>
+        <p class="muted small">Right-click and drag: arrow. Right-click a square: highlight. Shift / Alt / Ctrl: red / blue / yellow. Left-click clears. Touch screens: use Draw.</p>
+        <div class="toggle"><span><b>Think First</b> <small class="muted">students mark up to 3 candidates before moving</small></span>${sw('cThink', CL.think, 'Think First')}</div>
+        <div class="toggle"><span><b>Engine</b> <small class="muted">hidden from students until you reveal it</small></span>${sw('cEng', CL.engine, 'Reveal engine')}</div>
+        <div class="btns">${CL.poll ? '' : '<button class="btn small" id="cPoll">Ask the class: what would you play?</button>'}<button class="btn small alt" id="cHw">Set as homework</button></div>
+
+        <p class="muted small" style="margin:4px 0 0">This preview runs on one device: switch "Moving as" to see a student's side. In live classes everyone shares this board.</p></div>`)}
+      ${pane('record', `<div class="rec${CL.rec ? ' on' : ''}">        ${CL.rec ? `<div class="row"><span class="dot"></span><b>Recording</b><span id="cRecT" class="muted">${fmtT((Date.now() - CL.rec.t0) / 1000)}</span></div>
           <div class="row"><input id="cCap" placeholder="Add a caption students will read" aria-label="Caption"><button class="btn small alt" id="cCapB">Add</button></div>
           <div class="row"><input id="cChap" placeholder="Chapter name, e.g. The plan" aria-label="Chapter name"><button class="btn small alt" id="cChapB">Add chapter</button></div>
           <div class="row"><input id="cTitle" placeholder="Replay title" aria-label="Replay title"><button class="btn small" id="cRec">■ Stop and save</button></div>`
         : `<div class="toggle"><span><b>Lesson Replay</b> <small class="muted">records moves, arrows and captions${'MediaRecorder' in window ? ', plus your voice if you allow the microphone' : ''}</small></span></div>
           <div class="row"><span>Record voice</span>${sw('cMic', true, 'Record voice')}<button class="btn small" id="cRec">● Start recording</button></div>`}
-      </div>
-    </div></div>
-    <div class="cgrid">
-      <div class="card glass"><h3>Load a position or game</h3>
-        <label class="drop small-drop" id="cDrop"><input type="file" accept="image/*,application/pdf,.pdf" id="cDropF" hidden><span class="ic"><svg><use href="#i-deck"/></svg></span>
+</div><h3 class="sub" style="margin:16px 0 8px;font-size:17px">Lesson replays</h3>${replayList()}`)}
+      ${pane('load', `<div class="ldpane"><label class="drop small-drop" id="cDrop"><input type="file" accept="image/*,application/pdf,.pdf" id="cDropF" hidden><span class="ic"><svg><use href="#i-deck"/></svg></span>
           <span><b>From a picture or PDF</b><span class="muted small"> Drop a screenshot, photo or book page with a diagram, or tap to choose. MoonChess reads the position and you check it.</span></span></label>
         <p class="muted small">Or paste a FEN, a PGN, or moves from Lichess or Chess.com.</p>
         <textarea id="cImp" placeholder="FEN or PGN" aria-label="FEN or PGN"></textarea>
-        <div class="btns"><button class="btn small" id="cLoad">Load on the board</button><button class="btn small alt" id="cToDeck">Add mistakes to Mistake Deck</button><span class="muted small" id="cImpMsg"></span></div></div>
-      <div class="card glass"><h3>Lesson replays</h3>${replayList()}</div>
-    </div>`;
+        <div class="btns"><button class="btn small" id="cLoad">Load on the board</button><button class="btn small alt" id="cToDeck">Add mistakes to Mistake Deck</button><span class="muted small" id="cImpMsg"></span></div></div>`)}
+    </aside>
+  </div>`;
+  body.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { CL.side = b.dataset.side; body.querySelectorAll('[data-side]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); }); body.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== CL.side); });
   cB = new M.Board($('cBoard'), cMove); cM = new Marks($('cMarks')); cM.arrows = CL.ma; cM.highs = CL.mh;
   cB.onArrow = (a, b, c) => {
     if (a === b) { const k = cM.highs.indexOf(a); k >= 0 ? cM.highs.splice(k, 1) : cM.highs.push(a); }
@@ -643,7 +647,7 @@ function vClass() {
   cSync(); cEngine();
 }
 M.view('class', vClass, { app: true });
-M.leave.class = () => { if (cM) cM.laser = []; };
+M.leave.class = () => { if (cM) cM.laser = []; document.body.classList.remove('ws-on'); };
 
 function setHomework() {
   const fen = C.fen(CL.pos); let blob = null;
