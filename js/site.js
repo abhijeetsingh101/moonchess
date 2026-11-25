@@ -63,59 +63,71 @@ const FEATS = [
 ];
 const featHtml = list => `<div class="feats">${list.map(([h, ic, t, d, who]) => `<a class="ft" href="${h}"><span class="ic">${ic}</span><span class="who">${who}</span><h3>${t}</h3><p>${d}</p><span class="go">Open →</span></a>`).join('')}</div>`;
 const shead = (t, p, c) => `<div class="shead${c ? ' center' : ''}"><h2 class="title">${t}</h2>${p ? `<p>${p}</p>` : ''}</div>`;
+const CLASS_FEATS = [
+  ['<svg><use href="#i-video"/></svg>', 'Live video class', 'Students join with a 6-letter code. You see and hear each other while you teach on one board.'],
+  ['<svg><use href="#i-class"/></svg>', 'You decide who moves', 'Demonstrate, Guided (you approve each student move) or Free. Switch any time.'],
+  ['♞', 'Arrows, highlights, laser', 'Right-click to draw in four colours, or point with a laser that fades away.'],
+  ['<svg><use href="#i-puz"/></svg>', 'Think First', 'Students mark up to three candidate moves before they play. You see how they think.'],
+  ['<svg><use href="#i-users"/></svg>', 'Class Poll', '"What would you play?" Every student answers and a colour map appears on the board.'],
+  ['<svg><use href="#i-chart"/></svg>', 'Engine on your terms', 'Evaluation and best lines stay hidden from students until you reveal them.'],
+  ['<svg><use href="#i-replay"/></svg>', 'Every lesson recorded', 'Moves, arrows, captions, chapters and your voice become a replay students can pause and try.'],
+  ['<svg><use href="#i-deck"/></svg>', 'Load anything', 'FEN, PGN, Lichess and Chess.com games, or a photo or PDF of a book diagram.'],
+  ['<svg><use href="#i-mic"/></svg>', 'Voice-note homework', 'Record a question on any position. Students answer with moves, text or their voice.'],
+  ['<svg><use href="#i-bell"/></svg>', 'Parent Pulse and schedule', 'A weekly update for parents you approve in one tap, plus weekly batches with WhatsApp reminders.']
+];
+function classMock() {
+  const tiles = [['Coach', 'C', true], ['Aarav', 'A'], ['Diya', 'D'], ['Kabir', 'K']];
+  return `<div class="cmock" aria-hidden="true">
+    <div class="cm-top"><span class="cm-live"><span class="dot"></span>Live · 3 students</span><span class="cm-code">Class code <b>K7QM2P</b></span><span class="cm-rec">● Recording 12:04</span></div>
+    <div class="cm-body">
+      <div class="cm-vids">${tiles.map(([n, i, c]) => `<div class="cm-v${c ? ' coach' : ''}"><span>${i}</span><small>${n}</small></div>`).join('')}</div>
+      <div class="cm-board">${clip(ITAL, [{ a: 'f3', b: 'g5', col: '#2fa86a', at: .2 }, { heat: .7, sq: 'g5', pct: '50%', at: 1 }, { heat: .45, sq: 'd3', pct: '30%', at: 1.4 }, { heat: .25, sq: 'c3', pct: '20%', at: 1.8 }])}</div>
+      <div class="cm-side"><div class="cm-card"><b>Class Poll</b><div class="cm-bar"><i style="width:50%"></i></div><small>Ng5 50% · d3 30% · c3 20%</small></div>
+        <div class="cm-card"><b>Aarav proposes</b><small>Nxe5. Approve or send back?</small><div class="cm-btns"><span>Approve</span><span class="alt">Send back</span></div></div>
+        <div class="cm-card"><b>Think First</b><small>Diya: Ng5, d3, O-O → played d3</small></div></div>
+    </div></div>`;
+}
 function vHome() {
   const n = M.ALL.length, pz = M.K.puzzles.length;
   $('v-home').innerHTML = `
-  <section class="band hero2"><div class="wrap phero">
-    <div><span class="eyebrow">Chess lessons, practice and live classes</span>
-      <h1>Learn chess. Get a little better every week.</h1>
-      <p class="big">MoonChess is a friendly place to learn and practise chess, and to take live classes with your coach. After every lesson, you get practice made from your own games.</p>
-      <p style="margin:0 0 10px;font-weight:800">Who are you?</p>
-      <div class="doors">
-        <a class="door" href="#players"><span class="ic"><svg><use href="#i-learn"/></svg></span><b>I'm learning chess</b><small>Lessons, puzzles and bots. Free to start.</small><span class="go">Start here →</span></a>
-        <a class="door" href="#coaches"><span class="ic"><svg><use href="#i-class"/></svg></span><b>I teach chess</b><small>Live classes, homework and parent updates.</small><span class="go">For coaches →</span></a>
-        <a class="door" href="#parents"><span class="ic"><svg><use href="#i-users"/></svg></span><b>I'm a parent</b><small>See what your child learns each week.</small><span class="go">For parents →</span></a>
-      </div>
-      <p class="joinline">Got a class code from your coach? <a class="lnk" href="#join">Join your class →</a></p></div>
-    <div class="herofig" aria-hidden="true">
-      <div class="boardcard">${clip(ITAL, [{ a: 'f3', b: 'g5', col: '#ffd84a', at: .3 }, { heat: .4, sq: 'f7', at: 1.2 }, { a: 'c4', b: 'f7', col: '#ffd84a', at: 2 }])}</div>
-      ${M.pipSvg('pipfig')}
-      <div class="say">Hi, I'm Pip! I'll help you learn, one small step at a time.</div>
-      <div class="pill"><svg><use href="#medal"/></svg>Daily puzzle solved · +50 XP</div>
-    </div>
+  <section class="band hero2 coachhero"><div class="wrap">
+    <div class="ch-copy"><span class="eyebrow">The online classroom for chess coaches</span>
+      <h1>Teach chess live. Your students keep improving between lessons.</h1>
+      <p class="big">Run your class on one shared board with video, polls and arrows. Every lesson is recorded, turns into practice built from each student's own mistakes, and ends with a weekly note to parents.</p>
+      <div class="btns"><a class="btn" href="#class">Open the classroom, free</a><a class="btn alt" href="#coaches">See how coaches use it</a></div>
+      <p class="muted small" style="margin-top:12px">Free for up to 3 students. No card needed. Students and parents never pay.</p></div>
+    ${classMock()}
+    <div class="ch-alt"><a href="#join"><b>Have a class code?</b> Join your class →</a><a href="#players"><b>Learning on your own?</b> Lessons, puzzles and bots →</a><a href="#parents"><b>A parent?</b> See what your child gets →</a></div>
   </div></section>
   <section class="band"><div class="wrap">
-    ${shead('Everything you can do on MoonChess', `${n} lessons, ${pz} puzzles, three bots, live classes and more. Tap any card to try it.`)}
-    ${featHtml(FEATS)}
+    ${shead('Everything you need to teach, on one board', 'The tools of a real chess classroom, built for teaching children and club players online.')}
+    <div class="feats cfeats">${CLASS_FEATS.map(([ic, t, d]) => `<a class="ft" href="#class"><span class="ic">${ic}</span><h3>${t}</h3><p>${d}</p></a>`).join('')}</div>
+    <div class="btns" style="margin-top:22px"><a class="btn" href="#class">Try the classroom now</a><a class="btn alt" href="#pricing">₹999/month after 3 students</a></div>
   </div></section>
   <section class="band tint"><div class="wrap">
-    ${shead('How MoonChess helps you improve', 'Most chess stops when class ends. Here, every lesson becomes a week of practice.')}
+    ${shead('One lesson, a whole week of progress', 'Most tools stop when the video call ends. MoonChess turns each class into practice and a parent update.')}
     <div class="loop">${[
-      ['Learn in class', 'Your coach teaches on a shared board, live on video. You can draw, answer polls and suggest moves.', '#join', 'Join a class'],
-      ['Watch it again', 'The lesson is saved as a replay. Pause it and try the moves yourself whenever you like.', '#replay', 'Watch a sample'],
-      ['Practise your mistakes', 'Slips from your own games become puzzles in your Mistake Deck, until you get them right.', '#deck', 'Open the deck'],
-      ['Parents see progress', 'A short weekly note tells parents what was learned, written for them and checked by the coach.', '#parents', 'See an example']
+      ['Teach live', 'Video, a shared board, polls and Think First. You choose who can move and when the engine appears.', '#class', 'Open the classroom'],
+      ['Replay', 'The class is saved with every move, arrow and word. Students pause it and try the moves themselves.', '#replay', 'Watch a sample'],
+      ['Practise', 'Each student\'s own blunders become puzzles in their Mistake Deck, until they stop happening.', '#deck', 'See a Mistake Deck'],
+      ['Report', 'Parents get the Parent Pulse each week: classes, puzzles, a highlight and your note. You approve it in one tap.', '#parents', 'See a Pulse']
     ].map(([t, d, h, l], i) => `<div class="step glass"><span class="planet p${i}">${i + 1}</span><h3>${t}</h3><p class="muted">${d}</p><a href="${h}" class="lnk">${l} →</a></div>`).join('')}</div>
   </div></section>
   <section class="band"><div class="wrap tryrow">
-    <div>${shead('Try it: a one-minute lesson', 'This is a real Lesson Replay. Press play, jump between chapters, or pause and press "Try it yourself" to move the pieces.')}
-      <ul class="ticks"><li>The coach's arrows and notes appear right on the board</li><li>Chapters work like bookmarks</li><li>Pause any time and play the moves yourself</li></ul>
+    <div>${shead('Watch a one-minute lesson replay', 'This is what your students get after every class. Press play, jump between chapters, or pause and press "Try it yourself".')}
+      <ul class="ticks"><li>Your arrows and notes appear right on the board</li><li>Chapters work like bookmarks</li><li>Students can pause and play the moves themselves</li></ul>
       <button class="btn" id="hWatch">▶ Play the lesson</button></div>
     <div class="glass demo"><div id="hRp"></div></div>
   </div></section>
   <section class="band tint"><div class="wrap">
-    ${shead('Made for coaches who teach groups', 'Tools that keep every student thinking, not just the one who is called on.')}
-    <div class="two-up">
-      <div class="glass feat">${thinkClip()}<div><h3>Think First</h3><p class="muted">Before moving, a student marks up to three moves they're considering. You see how they think, not only what they play.</p><a class="lnk" href="#class">Try it in the classroom →</a></div></div>
-      <div class="glass feat">${pollClip()}<div><h3>Class Poll</h3><p class="muted">Ask "what would you play?" Every student taps a move and a colour map of the answers appears on the board.</p><a class="lnk" href="#class">Run a poll →</a></div></div>
-    </div>
-    <div class="btns" style="margin-top:20px"><a class="btn alt" href="#coaches">Everything for coaches →</a></div>
+    ${shead('Your students get a full chess app too', `Between classes they learn with Pip: ${n} lessons, ${pz} puzzles, friendly bots, online games with friends and a skill map. All free for them.`)}
+    ${featHtml(FEATS.filter(f => f[4] !== 'Coaches').slice(0, 4))}
   </div></section>
-  <section class="band"><div class="wrap beta glass"><div><h2>Built with coaches, not guessed at</h2><p class="muted">We're opening a private beta for 10 coaches teaching children and club players online. Their stories will go here once they've taught real classes with MoonChess, not before.</p></div><a class="btn alt" href="#coaches">What coaches get →</a></div></section>
-  <section class="band tint"><div class="wrap"><div class="row" style="justify-content:space-between;align-items:flex-end">${shead('Simple, open prices', 'Free for players and parents, always. Coaches start free with up to 3 students.')}<a class="lnk" href="#pricing" style="margin-bottom:28px">Full pricing →</a></div>
+  <section class="band"><div class="wrap beta glass"><div><h2>Built with coaches, not guessed at</h2><p class="muted">We're opening a private beta for 10 coaches teaching children and club players online. Their stories will go here once they've taught real classes with MoonChess, not before.</p></div><a class="btn" href="#coaches">Join the beta as a coach →</a></div></section>
+  <section class="band tint"><div class="wrap"><div class="row" style="justify-content:space-between;align-items:flex-end">${shead('Simple, open prices', 'Start free with 3 students. Students and parents never pay.')}<a class="lnk" href="#pricing" style="margin-bottom:28px">Full pricing →</a></div>
     ${planCards(true)}</div></section>
-  <section class="band"><div class="wrap narrow">${shead('Questions people ask', '', true)}${faqHtml(FAQ.slice(0, 5))}</div></section>
-  ${cta('Ready for your first move?', 'Players can start a lesson right now. Coaches can open the classroom and teach a live class today.', true)}`;
+  <section class="band"><div class="wrap narrow">${shead('Questions coaches ask', '', true)}${faqHtml(FAQ.slice(0, 5))}</div></section>
+  ${cta('Teach your next class on MoonChess', 'Open the classroom, start a live class and share the code. Your first students can join in a minute.')}`;
   homeRp && homeRp.destroy(); homeRp = M.player($('hRp'), M.DEMO);
   $('hWatch').onclick = () => { $('hRp').scrollIntoView({ behavior: 'smooth', block: 'center' }); homeRp.play(); };
 }
